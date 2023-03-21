@@ -1,4 +1,4 @@
-import serviceLeague from '@/services/serviceLeague';
+import serviceLeague from '@/services/serviceTournament';
 
 class ControllerLeague {
   async load(req: any): Promise<string> {

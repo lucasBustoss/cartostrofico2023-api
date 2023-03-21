@@ -1,12 +1,15 @@
-import controllerLeague from '@/controllers/controllerTournament';
+import controllerTournament from '@/controllers/controllerTournament';
+import ensureAuthenticated from '@/middlewares/ensureAuthenticated';
 
 import { Router } from 'express';
 
 const tournamentRouter = Router();
 
+tournamentRouter.use(ensureAuthenticated);
+
 tournamentRouter.get('/', async (req, res) => {
   try {
-    const status = await controllerLeague.load(req);
+    const status = await controllerTournament.load(req);
 
     return res.status(200).json({ message: status });
   } catch (err) {

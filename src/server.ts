@@ -1,13 +1,16 @@
 import mongoose from 'mongoose';
 import './config/module-alias';
-import { env } from '@/config/env';
+import * as dotenv from 'dotenv';
+
+const path = '.env';
+dotenv.config({ path });
 
 mongoose
-  .connect(env.mongoUrl)
+  .connect(process.env.MONGO_URL)
   .then(async () => {
     const app = (await import('./config/app')).default;
-    app.listen(env.appPort, () =>
-      console.log(`Server running at http://localhost:${env.appPort}`),
+    app.listen(process.env.APP_PORT, () =>
+      console.log(`Server running at http://localhost:${process.env.APP_PORT}`),
     );
   })
   .catch(console.error);
