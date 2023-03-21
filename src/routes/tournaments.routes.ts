@@ -9,9 +9,31 @@ tournamentRouter.use(ensureAuthenticated);
 
 tournamentRouter.get('/', async (req, res) => {
   try {
-    const status = await controllerTournament.load(req);
+    const tournaments = await controllerTournament.load(req);
 
-    return res.status(200).json({ message: status });
+    return res.status(200).json(tournaments);
+  } catch (err) {
+    console.log(err);
+    return res.status(400).json({ error: err.message });
+  }
+});
+
+tournamentRouter.post('/', async (req, res) => {
+  try {
+    const tournament = await controllerTournament.create(req);
+
+    return res.status(200).json(tournament);
+  } catch (err) {
+    console.log(err);
+    return res.status(400).json({ error: err.message });
+  }
+});
+
+tournamentRouter.post('/time', async (req, res) => {
+  try {
+    const response = await controllerTournament.addTeam(req);
+
+    return res.status(200).json({ message: response });
   } catch (err) {
     console.log(err);
     return res.status(400).json({ error: err.message });
