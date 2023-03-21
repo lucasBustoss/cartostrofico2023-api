@@ -1,0 +1,60 @@
+{
+    "env": {
+        "es2021": true,
+        "node": true
+    },
+    "extends": [
+        "airbnb-base",
+        "plugin:@typescript-eslint/recommended",
+        "plugin:prettier/recommended"
+    ],
+    "overrides": [
+    ],
+    "parserOptions": {
+        "ecmaVersion": "latest",
+        "sourceType": "module",
+        "project": "./tsconfig.json"
+    },
+    "plugins": [
+        "@typescript-eslint",
+        "prettier"
+    ],
+    "rules": {
+        "no-console": 0,
+        "linebreak-style": 0,
+        "@typescript-eslint/no-explicit-any": "off",
+        "class-methods-use-this": 0,
+        "import/prefer-default-export": 0,
+        "no-plusplus": 0,
+        "max-classes-per-file": 0,
+        "space-before-blocks": "off",
+        "new-cap": "off",
+        "no-await-in-loop": 0,
+        "no-promise-executor-return": 0,
+        "@typescript-eslint/space-before-blocks": "off",
+        "@typescript-eslint/strict-boolean-expressions": "off",
+        "@typescript-eslint/method-signature-style": "off",
+        "@typescript-eslint/prefer-nullish-coalescing": "off",
+        "@typescript-eslint/no-misused-promises": "off",
+        "@typescript-eslint/consistent-type-definitions": "off",
+        "@typescript-eslint/no-namespace": "off",
+        "prettier/prettier": [
+            "error",
+            {
+                "endOfLine": "auto"
+            }
+        ],
+        "import/extensions": [
+            "error",
+            "ignorePackages",
+            {
+                "ts": "never"
+            }
+        ]
+    },
+    "settings": {
+        "import/resolver": {
+            "typescript": {}
+        }
+    }
+}
