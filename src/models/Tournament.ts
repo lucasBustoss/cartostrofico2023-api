@@ -19,15 +19,17 @@ export class Team {
 export class Award {
   position: number;
 
-  awardValue: number;
+  award: number;
 }
 
 export class Parameters {
-  drawLimit: number;
+  drawOffset: number;
 
   relegationQuantity: number;
 
   classificationQuantity: number;
+
+  playoffType: string;
 
   pointsPerWin: number;
 
@@ -46,6 +48,10 @@ export class Tournament {
   type: string;
 
   ownerId: string;
+
+  drawDate?: Date;
+
+  startDate?: Date;
 
   awards: Award[];
 

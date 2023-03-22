@@ -40,4 +40,48 @@ tournamentRouter.post('/time', async (req, res) => {
   }
 });
 
+tournamentRouter.post('/sorteio', async (req, res) => {
+  try {
+    const response = await controllerTournament.drawTournament(req);
+
+    return res.status(200).json({ message: response });
+  } catch (err) {
+    console.log(err);
+    return res.status(400).json({ error: err.message });
+  }
+});
+
+tournamentRouter.post('/inicio', async (req, res) => {
+  try {
+    const response = await controllerTournament.startTournament(req);
+
+    return res.status(200).json({ message: response });
+  } catch (err) {
+    console.log(err);
+    return res.status(400).json({ error: err.message });
+  }
+});
+
+tournamentRouter.put('/', async (req, res) => {
+  try {
+    const response = await controllerTournament.update(req);
+
+    return res.status(200).json({ message: response });
+  } catch (err) {
+    console.log(err);
+    return res.status(400).json({ error: err.message });
+  }
+});
+
+tournamentRouter.delete('/:id', async (req, res) => {
+  try {
+    const response = await controllerTournament.delete(req);
+
+    return res.status(200).json({ message: response });
+  } catch (err) {
+    console.log(err);
+    return res.status(400).json({ error: err.message });
+  }
+});
+
 export default tournamentRouter;

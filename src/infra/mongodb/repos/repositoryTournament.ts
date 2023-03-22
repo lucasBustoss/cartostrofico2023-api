@@ -22,13 +22,20 @@ class RepositoryTournament {
 
   async load(parameters: LoadTournamentParameters): Promise<Tournament[]> {
     const query = this.getQueryParams(parameters);
-    console.log(query);
     return TournamentSchema.find(query);
   }
 
   async loadOne(parameters: LoadTournamentParameters): Promise<Tournament> {
     const query = this.getQueryParams(parameters);
     return TournamentSchema.findOne(query);
+  }
+
+  async update(tournament: Tournament): Promise<void> {
+    await TournamentSchema.findOneAndUpdate({ id: tournament.id }, tournament);
+  }
+
+  async delete(id: string): Promise<void> {
+    await TournamentSchema.findOneAndDelete({ id });
   }
 
   private getQueryParams(
