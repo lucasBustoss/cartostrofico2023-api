@@ -1,3 +1,9 @@
+export class Draw {
+  standing: any;
+
+  matches: any;
+}
+
 export class Team {
   name: string;
 

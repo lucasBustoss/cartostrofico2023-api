@@ -1962,6 +1962,11 @@ find-up@^5.0.0:
     locate-path "^6.0.0"
     path-exists "^4.0.0"
 
+fixture-generator@^1.0.2:
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/fixture-generator/-/fixture-generator-1.0.2.tgz#5eeedf37602f68e51dda231357d530deedb6c960"
+  integrity sha512-66/j+qkhh97ggW5v1m+eaRfJcH7GNjNkcYtStggUxQj+YJu8N1XFGbMbBdYTDD7ZVj3/0kNqev3Wha9+JzdxoQ==
+
 flat-cache@^3.0.4:
   version "3.0.4"
   resolved "https://registry.yarnpkg.com/flat-cache/-/flat-cache-3.0.4.tgz#61b0338302b2fe9f957dcc32fc2a87f1c3048b11"

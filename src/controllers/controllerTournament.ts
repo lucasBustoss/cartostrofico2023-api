@@ -1,4 +1,4 @@
-import { Award, Parameters, Tournament } from '@/models/Tournament';
+import { Award, Draw, Parameters, Tournament } from '@/models/Tournament';
 import serviceTournament from '@/services/serviceTournament';
 
 class ControllerLeague {
@@ -27,6 +27,24 @@ class ControllerLeague {
       );
     }
 
+    if (
+      type === 'mata' &&
+      participants !== 2 &&
+      participants !== 4 &&
+      participants !== 8 &&
+      participants !== 16
+    ) {
+      throw new Error(
+        'Só é possível criar um torneio de mata-mata com 2, 4, 8 ou 16 participantes. Verifique e tente novamente.',
+      );
+    }
+
+    if (type === 'mesclado' && participants !== 16) {
+      throw new Error(
+        'Só é possível criar um torneio de grupos + playoffs com 16 participantes. Verifique e tente novamente.',
+      );
+    }
+
     return serviceTournament.create(
       name,
       participants,
@@ -47,6 +65,12 @@ class ControllerLeague {
     }
 
     const tournament = await serviceTournament.loadOne({ id: tournamentId });
+
+    if (tournament.participants === tournament.teams.length) {
+      throw new Error(
+        `Já existem ${tournament.participants} participantes no torneio. Verifique e tente novamente.`,
+      );
+    }
 
     if (
       tournament &&
@@ -103,7 +127,7 @@ class ControllerLeague {
     return 'Torneio atualizado com sucesso!';
   }
 
-  async drawTournament(req: any): Promise<string> {
+  async drawTournament(req: any): Promise<Draw> {
     const { id } = req.body;
 
     if (!id) {
@@ -120,9 +144,14 @@ class ControllerLeague {
       );
     }
 
-    await serviceTournament.drawTournament(id);
+    if (tournament.participants > tournament.teams.length) {
+      throw new Error(
+        `Não é possível sortear o torneio com menos participantes que o informado nos parâmetros. Atualmente o torneio tem ${tournament.teams.length} participantes e são necessários ${tournament.participants}. Verifique e tente novamente`,
+      );
+    }
 
-    return 'Torneio sorteado com sucesso!';
+    // await serviceTournament.drawTournament(id);
+    return serviceTournament.drawTournament(id);
   }
 
   async startTournament(req: any): Promise<string> {

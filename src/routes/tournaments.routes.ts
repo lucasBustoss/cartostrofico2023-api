@@ -44,7 +44,7 @@ tournamentRouter.post('/sorteio', async (req, res) => {
   try {
     const response = await controllerTournament.drawTournament(req);
 
-    return res.status(200).json({ message: response });
+    return res.status(200).json(response);
   } catch (err) {
     console.log(err);
     return res.status(400).json({ error: err.message });

@@ -39,6 +39,9 @@
         "@typescript-eslint/consistent-type-definitions": "off",
         "@typescript-eslint/no-namespace": "off",
         "camelcase": "off",
+        "no-restricted-syntax": "off",
+        "no-bitwise": "off",
+        "no-nested-ternary": "off",
         "prettier/prettier": [
             "error",
             {
