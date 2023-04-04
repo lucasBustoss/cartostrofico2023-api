@@ -1,5 +1,11 @@
 import { Team } from '@/models/Tournament';
 import axios from 'axios';
+import fs from 'fs';
+
+interface StatusMarket {
+  actualRound: number;
+  statusMarket: number;
+}
 
 class CartolaApi {
   private readonly api = axios.create({
@@ -36,6 +42,45 @@ class CartolaApi {
     }
 
     return null;
+  }
+
+  async getStatusMarket(): Promise<StatusMarket | null> {
+    const response = await this.api.get('mercado/status');
+
+    if (response && response.data) {
+      const { rodada_atual, status_mercado } = response.data;
+
+      return {
+        actualRound: Number(rodada_atual),
+        statusMarket: Number(status_mercado),
+      };
+    }
+
+    return null;
+  }
+
+  async getTeamPoints(id: number): Promise<number> {
+    const response = await this.api.get(`time/id/${id}`);
+
+    if (response && response.data) {
+      const points = response.data.pontos || 0;
+
+      return points;
+    }
+
+    return 0;
+  }
+
+  async getTeamPointsByJson(id: number): Promise<number> {
+    const response = JSON.parse(
+      fs.readFileSync(
+        'C:/Users/Lucas/Documents/cartostrófico/backend/src/infra/api/pontos.json',
+        'utf8',
+      ),
+    );
+
+    const team = response.find((t: any) => t.time.time_id === id);
+    return team.pontos;
   }
 }
 

@@ -11,6 +11,8 @@ class ControllerLeague {
     const { name, participants, type, awards, parameters } = req.body;
     const { id } = req.user;
 
+    // #region Validations
+
     if (!id) {
       throw new Error('Usuário inválido');
     }
@@ -39,11 +41,47 @@ class ControllerLeague {
       );
     }
 
-    if (type === 'mesclado' && participants !== 16) {
-      throw new Error(
-        'Só é possível criar um torneio de grupos + playoffs com 16 participantes. Verifique e tente novamente.',
-      );
+    if (type === 'mesclado') {
+      if (participants !== 16) {
+        throw new Error(
+          'Só é possível criar um torneio de grupos + playoffs com 16 participantes. Verifique e tente novamente.',
+        );
+      }
+
+      if (
+        !parameters.correspondentRounds ||
+        parameters.correspondentRounds.length === 0 ||
+        parameters.correspondentRounds.some(
+          (cr: any) => cr.correspondent === null,
+        )
+      ) {
+        throw new Error(
+          'Por favor, preencha as rodadas correspondentes corretamente.',
+        );
+      }
+
+      const correspondent = [] as number[];
+      for (let i = 0; i < parameters.correspondentRounds.length; i++) {
+        const cr = parameters.correspondentRounds[i];
+
+        if (correspondent.includes(cr.correspondent)) {
+          const phase =
+            cr.phase === 'group'
+              ? 'de grupos'
+              : cr.phase === 'quarter'
+              ? 'quartas de final'
+              : cr.phase === 'semi'
+              ? 'semi-final'
+              : 'final';
+          throw new Error(
+            `Não é possível informar rodadas correspondentes duplicadas. Verifique a rodada ${cr.round} da fase ${phase}.`,
+          );
+        } else {
+          correspondent.push(cr.correspondent);
+        }
+      }
     }
+    // #endregion
 
     return serviceTournament.create(
       name,
@@ -85,7 +123,16 @@ class ControllerLeague {
   }
 
   async update(req: any): Promise<string> {
-    const { id, name, participants, type, awards, parameters } = req.body;
+    const {
+      id,
+      name,
+      participants,
+      type,
+      currentRound,
+      finished,
+      awards,
+      parameters,
+    } = req.body;
     const userId = req.user.id;
 
     if (!id) {
@@ -120,6 +167,8 @@ class ControllerLeague {
       name,
       participants,
       type,
+      currentRound,
+      finished,
       awards,
       parameters,
     );
@@ -180,6 +229,46 @@ class ControllerLeague {
     await serviceTournament.startTournament(id);
 
     return 'Torneio iniciado com sucesso!';
+  }
+
+  async updatePoints(req: any): Promise<string> {
+    const { id } = req.body;
+
+    if (!id) {
+      throw new Error('É necessário informar o id do torneio.');
+    }
+
+    const tournament = await serviceTournament.loadOne({
+      id,
+    });
+
+    if (!tournament) {
+      throw new Error(
+        'O torneio informado não existe. Verifique e tente novamente',
+      );
+    }
+
+    if (!tournament.drawDate) {
+      throw new Error(
+        'Não é possivel atualizar os pontos de um torneio sem sorteio. Verifique e tente novamente',
+      );
+    }
+
+    if (!tournament.startDate) {
+      throw new Error(
+        'Não é possivel atualizar os pontos de um torneio não iniciado. Verifique e tente novamente',
+      );
+    }
+
+    if (tournament.finished) {
+      throw new Error(
+        'Não é possível atualizar os pontos de um campeonato já finalizado.',
+      );
+    }
+
+    await serviceTournament.updatePoints(id);
+
+    return 'Pontos atualizados!';
   }
 
   async delete(req: any): Promise<string> {

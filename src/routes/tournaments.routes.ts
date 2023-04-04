@@ -29,7 +29,7 @@ tournamentRouter.post('/', async (req, res) => {
   }
 });
 
-tournamentRouter.post('/time', async (req, res) => {
+tournamentRouter.post('/adicionarTime', async (req, res) => {
   try {
     const response = await controllerTournament.addTeam(req);
 
@@ -40,7 +40,7 @@ tournamentRouter.post('/time', async (req, res) => {
   }
 });
 
-tournamentRouter.post('/sorteio', async (req, res) => {
+tournamentRouter.post('/sortear', async (req, res) => {
   try {
     const response = await controllerTournament.drawTournament(req);
 
@@ -51,9 +51,20 @@ tournamentRouter.post('/sorteio', async (req, res) => {
   }
 });
 
-tournamentRouter.post('/inicio', async (req, res) => {
+tournamentRouter.post('/iniciar', async (req, res) => {
   try {
     const response = await controllerTournament.startTournament(req);
+
+    return res.status(200).json({ message: response });
+  } catch (err) {
+    console.log(err);
+    return res.status(400).json({ error: err.message });
+  }
+});
+
+tournamentRouter.post('/atualizar', async (req, res) => {
+  try {
+    const response = await controllerTournament.updatePoints(req);
 
     return res.status(200).json({ message: response });
   } catch (err) {

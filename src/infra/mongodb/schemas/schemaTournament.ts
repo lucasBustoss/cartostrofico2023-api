@@ -37,6 +37,10 @@ const TeamSchema = new mongoose.Schema({
     required: true,
     default: 1,
   },
+  points: {
+    type: Number,
+    required: false,
+  },
 });
 
 const AwardSchema = new mongoose.Schema({
@@ -47,6 +51,26 @@ const AwardSchema = new mongoose.Schema({
   award: {
     type: String,
     required: true,
+  },
+});
+
+const CorrespondentRoundSchema = new mongoose.Schema({
+  phase: {
+    type: String,
+    required: true,
+  },
+  round: {
+    type: Number,
+    required: true,
+  },
+  correspondent: {
+    type: Number,
+    required: true,
+  },
+  played: {
+    type: Boolean,
+    required: true,
+    default: false,
   },
 });
 
@@ -77,6 +101,10 @@ const ParameterSchema = new mongoose.Schema({
     type: Number,
     default: 3,
   },
+  correspondentRounds: {
+    type: [CorrespondentRoundSchema],
+    default: 3,
+  },
 });
 
 const TournamentSchema = new mongoose.Schema(
@@ -105,6 +133,20 @@ const TournamentSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    currentRound: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
+    currentPhase: {
+      type: String,
+      required: false,
+    },
+    finished: {
+      type: Boolean,
+      required: true,
+      default: false,
+    },
     startDate: {
       type: Date,
     },
@@ -115,6 +157,21 @@ const TournamentSchema = new mongoose.Schema(
     parameters: ParameterSchema,
     teams: {
       type: [TeamSchema],
+      required: true,
+      default: [],
+    },
+    matches: {
+      type: [],
+      required: true,
+      default: [],
+    },
+    matchesPlayoffs: {
+      type: [],
+      required: false,
+      default: null,
+    },
+    standing: {
+      type: [],
       required: true,
       default: [],
     },

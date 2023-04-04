@@ -20,12 +20,24 @@ export class Team {
   eliminated?: boolean;
 
   position?: number;
+
+  points?: number;
 }
 
 export class Award {
   position: number;
 
   award: number;
+}
+
+export class CorrespondentRounds {
+  phase: string;
+
+  round: number;
+
+  correspondent: number;
+
+  played?: boolean;
 }
 
 export class Parameters {
@@ -40,6 +52,8 @@ export class Parameters {
   pointsPerWin: number;
 
   pointsPerDraw: number;
+
+  correspondentRounds?: CorrespondentRounds[];
 }
 
 export class Tournament {
@@ -55,6 +69,12 @@ export class Tournament {
 
   ownerId: string;
 
+  currentRound: number;
+
+  currentPhase?: string;
+
+  finished: boolean;
+
   drawDate?: Date;
 
   startDate?: Date;
@@ -63,7 +83,13 @@ export class Tournament {
 
   parameters: Parameters;
 
+  standing?: any;
+
   teams?: Team[];
+
+  matches?: any;
+
+  matchesPlayoffs?: any;
 }
 
 export interface LoadTournamentParameters {
