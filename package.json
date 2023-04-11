@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "ts-node-dev --inspect --transpile-only --ignore-watch node_modules src/server.ts",
     "build": "tsc",
-    "typeorm": "ts-node-dev ./node_modules/typeorm/cli.js"
+    "start": "node dist/server.js"
   },
   "author": "",
   "license": "ISC",
@@ -20,7 +20,7 @@
     "jsonwebtoken": "^9.0.0",
     "module-alias": "^2.2.2",
     "mongoose": "^6.7.5",
-    "uuid": "^9.0.0"
+    "uuidv4": "^6.2.13"
   },
   "devDependencies": {
     "@types/axios": "^0.14.0",

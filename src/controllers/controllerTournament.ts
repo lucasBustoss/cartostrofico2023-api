@@ -1,10 +1,15 @@
-import { Award, Draw, Parameters, Tournament } from '@/models/Tournament';
+import { Award, Draw, Parameters, Team, Tournament } from '@/models/Tournament';
 import serviceTournament from '@/services/serviceTournament';
 
 class ControllerLeague {
   async load(req: any): Promise<Tournament[]> {
     const { ownerId, id, name, type } = req.query;
     return serviceTournament.load({ ownerId, id, name, type });
+  }
+
+  async searchCartolaTeam(req: any): Promise<Team[]> {
+    const { name } = req.query;
+    return serviceTournament.searchCartolaTeam(name);
   }
 
   async create(req: any): Promise<Tournament> {

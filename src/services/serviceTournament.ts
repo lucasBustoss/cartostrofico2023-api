@@ -4,9 +4,11 @@ import {
   Award,
   Draw,
   LoadTournamentParameters,
+  MatchesPlayoffs,
   Parameters,
   Team,
   Tournament,
+  MatchPlayoff,
 } from '@/models/Tournament';
 
 interface Teams {
@@ -18,6 +20,16 @@ interface RoundTeams {
   round: number;
   group?: string;
   teams: Teams[];
+}
+
+interface GroupMatches {
+  group: string;
+  teams: Teams[];
+}
+
+interface RoundGroupsTeams {
+  round: number;
+  groups: GroupMatches[];
 }
 
 interface MatchByTeam {
@@ -49,8 +61,16 @@ class ServiceTournament {
     'King Curry FC',
   ];
 
+  private groupMatches: RoundGroupsTeams[] = [];
+
   async load(parameters: LoadTournamentParameters): Promise<Tournament[]> {
     return repositoryTournament.load(parameters);
+  }
+
+  async searchCartolaTeam(name: string): Promise<Team[]> {
+    const teams = await apiCartola.getSearchTeam(name);
+
+    return teams;
   }
 
   async loadOne(parameters: LoadTournamentParameters): Promise<Tournament> {
@@ -134,12 +154,14 @@ class ServiceTournament {
   async drawTournament(id: string): Promise<Draw> {
     const tournament = await this.loadOne({ id });
     const teams = tournament.teams.sort(() => Math.random() - 0.5);
+    this.groupMatches = [];
     let matches;
     let standing;
 
     if (tournament.type === 'pontos') {
-      matches = await this.drawLeagueMatches(teams, tournament.participants);
-      standing = await this.createLeagueStanding(teams);
+      await this.drawLeagueMatches(teams, tournament.participants, 'todos');
+      matches = this.groupMatches;
+      standing = await this.createLeagueStanding(teams, 'todos');
     }
 
     if (tournament.type === 'resta') {
@@ -161,26 +183,29 @@ class ServiceTournament {
       for (let i = 0; i < groups.length; i++) {
         const groupTeams = participants.splice(0, 4);
 
+        await this.drawLeagueMatches(groupTeams, groupTeams.length, groups[i]);
+
         const standingGroup = await this.createLeagueStanding(
           groupTeams,
           groups[i],
         );
 
-        const matchesGroup = await this.drawLeagueMatches(
-          groupTeams,
-          groupTeams.length,
-          groups[i],
-        );
-
         standing.push(...standingGroup);
-        matches.push(...matchesGroup);
       }
+
+      matches = this.groupMatches;
     }
 
-    for (let i = 0; i < tournament.parameters.correspondentRounds.length; i++) {
-      const cr = tournament.parameters.correspondentRounds[i];
+    if (tournament.parameters && tournament.parameters.correspondentRounds) {
+      for (
+        let i = 0;
+        i < tournament.parameters.correspondentRounds.length;
+        i++
+      ) {
+        const cr = tournament.parameters.correspondentRounds[i];
 
-      cr.played = false;
+        cr.played = false;
+      }
     }
 
     tournament.currentRound = 1;
@@ -190,6 +215,7 @@ class ServiceTournament {
     tournament.matchesPlayoffs = tournament.type === 'mata' ? matches : null;
     tournament.standing = standing;
     tournament.drawDate = new Date();
+    tournament.startDate = new Date();
 
     await repositoryTournament.update(tournament);
 
@@ -213,7 +239,7 @@ class ServiceTournament {
       process.env.NODE_ENV === 'dev' ? 1 : statusMarket.actualRound;
 
     // FOR MOCKADO PARA SIMULAR 10 RODADAS
-    for (actualRound; actualRound <= 15; actualRound++) {
+    for (actualRound; actualRound <= 8; actualRound++) {
       let round;
 
       if (tournament.finished) {
@@ -246,34 +272,42 @@ class ServiceTournament {
         }
 
         if (round) {
-          for (let i = 0; i < round.teams.length; i++) {
-            const match = round.teams[i];
+          for (let k = 0; k < round.groups.length; k++) {
+            const group = round.groups[k];
 
-            const { homeTeam, awayTeam } = match;
-            if (process.env.NODE_ENV === 'dev') {
-              const homePoints = await apiCartola.getTeamPointsByJson(
-                homeTeam.teamId,
-              );
+            for (let i = 0; i < group.teams.length; i++) {
+              const match = group.teams[i];
 
-              const awayPoints = await apiCartola.getTeamPointsByJson(
-                awayTeam.teamId,
-              );
+              const { homeTeam, awayTeam } = match;
+              if (process.env.NODE_ENV === 'dev') {
+                const homePoints = await apiCartola.getTeamPointsByJson(
+                  homeTeam.teamId,
+                );
 
-              if (tournament.currentPhase !== 'group') {
-                if (tournament.currentRound === 1) {
-                  homeTeam.points = 0;
-                  awayTeam.points = 0;
+                const awayPoints = await apiCartola.getTeamPointsByJson(
+                  awayTeam.teamId,
+                );
+
+                if (tournament.currentPhase !== 'group') {
+                  if (tournament.currentRound === 1) {
+                    homeTeam.points = 0;
+                    awayTeam.points = 0;
+                  }
+
+                  homeTeam.points += homePoints;
+                  awayTeam.points += awayPoints;
+                } else {
+                  homeTeam.points = homePoints;
+                  awayTeam.points = awayPoints;
                 }
-
-                homeTeam.points += homePoints;
-                awayTeam.points += awayPoints;
               } else {
-                homeTeam.points = homePoints;
-                awayTeam.points = awayPoints;
+                homeTeam.points = await apiCartola.getTeamPoints(
+                  homeTeam.teamId,
+                );
+                awayTeam.points = await apiCartola.getTeamPoints(
+                  awayTeam.teamId,
+                );
               }
-            } else {
-              homeTeam.points = await apiCartola.getTeamPoints(homeTeam.teamId);
-              awayTeam.points = await apiCartola.getTeamPoints(awayTeam.teamId);
             }
           }
 
@@ -321,6 +355,7 @@ class ServiceTournament {
 
         if (!tournament.finished) {
           const updatePhase = await this.checkIfNeedsChangePhase(tournament);
+          const lastTournamentPhase = tournament.currentPhase;
           tournament.currentPhase = updatePhase.phase;
           tournament.currentRound = updatePhase.round;
 
@@ -349,8 +384,8 @@ class ServiceTournament {
 
             // Significa que mudou de fase, então tenho que gerar novos jogos
             if (
-              tournament.currentPhase !== 'quarter' &&
-              tournament.currentRound === 1
+              lastTournamentPhase !== 'group' &&
+              lastTournamentPhase !== tournament.currentPhase
             ) {
               const phasesPlayed =
                 tournament.parameters.correspondentRounds.filter(
@@ -362,23 +397,26 @@ class ServiceTournament {
                 phasesPlayed[phasesPlayed.length - 1].phase;
 
               const nextMatches = tournament.matchesPlayoffs.find(
-                (mp: any) => mp.round === tournament.currentPhase,
+                (mp: MatchesPlayoffs) => mp.round === tournament.currentPhase,
               );
 
               const lastPhaseMatches = tournament.matchesPlayoffs.find(
-                (mp: any) => mp.round === lastPhase,
+                (mp: MatchesPlayoffs) => mp.round === lastPhase,
               );
 
               for (let i = 0; i < nextMatches.teams.length; i++) {
-                const match = nextMatches.teams[i];
+                const match = nextMatches.teams[i] as MatchPlayoff;
                 const correspondentMatchHome = lastPhaseMatches.teams.find(
                   (m: any) => m.matchNumber === match.homeTeam.corresponding,
                 );
 
+                let homeTeam;
+                let awayTeam;
+
                 if (!correspondentMatchHome.homeTeam.eliminated) {
-                  match.homeTeam = correspondentMatchHome.homeTeam;
+                  homeTeam = correspondentMatchHome.homeTeam;
                 } else {
-                  match.homeTeam = correspondentMatchHome.awayTeam;
+                  homeTeam = correspondentMatchHome.awayTeam;
                 }
 
                 const correspondentMatchAway = lastPhaseMatches.teams.find(
@@ -386,10 +424,34 @@ class ServiceTournament {
                 );
 
                 if (!correspondentMatchAway.homeTeam.eliminated) {
-                  match.awayTeam = correspondentMatchAway.homeTeam;
+                  awayTeam = correspondentMatchAway.homeTeam;
                 } else {
-                  match.awayTeam = correspondentMatchAway.awayTeam;
+                  awayTeam = correspondentMatchAway.awayTeam;
                 }
+
+                match.homeTeam = {
+                  name: homeTeam.name,
+                  slug: homeTeam.slug,
+                  logoPng: homeTeam.logoPng,
+                  logoSvg: homeTeam.logoSvg,
+                  coach: homeTeam.coach,
+                  teamId: homeTeam.teamId,
+                  eliminated: false,
+                  position: homeTeam.position,
+                  points: 0,
+                };
+
+                match.awayTeam = {
+                  name: awayTeam.name,
+                  slug: awayTeam.slug,
+                  logoPng: awayTeam.logoPng,
+                  logoSvg: awayTeam.logoSvg,
+                  coach: awayTeam.coach,
+                  teamId: awayTeam.teamId,
+                  eliminated: false,
+                  position: awayTeam.position,
+                  points: 0,
+                };
               }
             }
           }
@@ -405,7 +467,7 @@ class ServiceTournament {
   }
 
   async updateStanding(tournament: Tournament): Promise<void> {
-    const { standing } = tournament;
+    let { standing } = tournament;
     let matchesRound;
 
     if (
@@ -417,90 +479,98 @@ class ServiceTournament {
       );
 
       if (matchesRound) {
-        for (let i = 0; i < matchesRound.teams.length; i++) {
-          const match = matchesRound.teams[i];
+        const oldStanding = [...standing];
+        standing = [];
+        for (let k = 0; k < matchesRound.groups.length; k++) {
+          const group = matchesRound.groups[k];
+          let groupStanding = oldStanding.filter(s => s.group === group.group);
 
-          const { homeTeam, awayTeam } = match;
+          for (let i = 0; i < group.teams.length; i++) {
+            const match = group.teams[i];
 
-          const homeTeamStanding = standing.find(
-            (st: any) => st.id === homeTeam.teamId,
-          );
+            const { homeTeam, awayTeam } = match;
 
-          const awayTeamStanding = standing.find(
-            (st: any) => st.id === awayTeam.teamId,
-          );
+            const homeTeamStanding = groupStanding.find(
+              (st: any) => st.id === homeTeam.teamId,
+            );
 
-          homeTeamStanding.matches += 1;
-          homeTeamStanding.pointsFavor += homeTeam.points;
-          homeTeamStanding.pointsAgainst += awayTeam.points;
-          homeTeamStanding.pointsBalance = Number(
-            (
-              homeTeamStanding.pointsFavor - homeTeamStanding.pointsAgainst
-            ).toFixed(2),
-          );
+            const awayTeamStanding = groupStanding.find(
+              (st: any) => st.id === awayTeam.teamId,
+            );
 
-          awayTeamStanding.matches += 1;
-          awayTeamStanding.pointsFavor += awayTeam.points;
-          awayTeamStanding.pointsAgainst += homeTeam.points;
-          awayTeamStanding.pointsBalance = Number(
-            (
-              awayTeamStanding.pointsFavor - awayTeamStanding.pointsAgainst
-            ).toFixed(2),
-          );
+            homeTeamStanding.matches += 1;
+            homeTeamStanding.pointsFavor += homeTeam.points;
+            homeTeamStanding.pointsAgainst += awayTeam.points;
+            homeTeamStanding.pointsBalance = Number(
+              (
+                homeTeamStanding.pointsFavor - homeTeamStanding.pointsAgainst
+              ).toFixed(2),
+            );
 
-          if (
-            Math.abs(homeTeam.points - awayTeam.points) <
-              tournament.parameters.drawOffset ||
-            homeTeam.points === awayTeam.points
-          ) {
-            homeTeamStanding.points += 1;
-            homeTeamStanding.draws += 1;
+            awayTeamStanding.matches += 1;
+            awayTeamStanding.pointsFavor += awayTeam.points;
+            awayTeamStanding.pointsAgainst += homeTeam.points;
+            awayTeamStanding.pointsBalance = Number(
+              (
+                awayTeamStanding.pointsFavor - awayTeamStanding.pointsAgainst
+              ).toFixed(2),
+            );
 
-            awayTeamStanding.points += 1;
-            awayTeamStanding.draws += 1;
-          } else if (homeTeam.points > awayTeam.points) {
-            homeTeamStanding.points += 3;
-            homeTeamStanding.wins += 1;
+            if (
+              Math.abs(homeTeam.points - awayTeam.points) <
+                tournament.parameters.drawOffset ||
+              homeTeam.points === awayTeam.points
+            ) {
+              homeTeamStanding.points += 1;
+              homeTeamStanding.draws += 1;
 
-            awayTeamStanding.losses += 1;
-          } else if (homeTeam.points < awayTeam.points) {
-            awayTeamStanding.points += 3;
-            awayTeamStanding.wins += 1;
+              awayTeamStanding.points += 1;
+              awayTeamStanding.draws += 1;
+            } else if (homeTeam.points > awayTeam.points) {
+              homeTeamStanding.points += 3;
+              homeTeamStanding.wins += 1;
 
-            homeTeamStanding.losses += 1;
+              awayTeamStanding.losses += 1;
+            } else if (homeTeam.points < awayTeam.points) {
+              awayTeamStanding.points += 3;
+              awayTeamStanding.wins += 1;
+
+              homeTeamStanding.losses += 1;
+            }
+
+            const totalPointsHome = homeTeamStanding.matches * 3;
+            const earnedPointsHome =
+              homeTeamStanding.wins * 3 + homeTeamStanding.draws;
+
+            homeTeamStanding.average =
+              Number((earnedPointsHome / totalPointsHome).toFixed(2)) * 100;
+
+            const totalPointsAway = awayTeamStanding.matches * 3;
+            const earnedPointAway =
+              awayTeamStanding.wins * 3 + awayTeamStanding.draws;
+
+            awayTeamStanding.average =
+              Number((earnedPointAway / totalPointsAway).toFixed(2)) * 100;
+
+            groupStanding = groupStanding.sort((a: any, b: any) => {
+              return b.points - a.points || b.pointsFavor - a.pointsFavor;
+            });
+
+            for (let j = 1; j <= groupStanding.length; j++) {
+              const team = groupStanding[j - 1];
+              team.position = j;
+            }
           }
 
-          const totalPointsHome = homeTeamStanding.matches * 3;
-          const earnedPointsHome =
-            homeTeamStanding.wins * 3 + homeTeamStanding.draws;
-
-          homeTeamStanding.average = (
-            earnedPointsHome / totalPointsHome
-          ).toFixed();
-
-          const totalPointsAway = awayTeamStanding.matches * 3;
-          const earnedPointAway =
-            awayTeamStanding.wins * 3 + awayTeamStanding.draws;
-
-          awayTeamStanding.average = (
-            earnedPointAway / totalPointsAway
-          ).toFixed();
-
-          standing.sort((a: any, b: any) => {
-            return b.points - a.points || b.pointsFavor - a.pointsFavor;
-          });
-
-          for (let j = 1; j <= standing.length; j++) {
-            const team = standing[j - 1];
-            team.position = j;
-          }
+          standing.push(...groupStanding);
         }
       }
     }
 
     if (tournament.type === 'resta') {
-      for (let i = 0; i < standing.length; i++) {
-        const team = standing[i];
+      const standingLeft = standing.filter((s: any) => !s.eliminated);
+      for (let i = 0; i < standingLeft.length; i++) {
+        const team = standingLeft[i];
 
         if (process.env.NODE_ENV === 'dev') {
           team.points = await apiCartola.getTeamPointsByJson(team.id);
@@ -509,11 +579,29 @@ class ServiceTournament {
         }
       }
 
-      standing.sort((a: any, b: any) => {
+      standingLeft.sort((a: any, b: any) => {
         return b.points - a.points;
       });
 
-      standing[standing.length - 1].eliminated = true;
+      standingLeft[standingLeft.length - 1].eliminated = true;
+
+      for (let i = 0; i < standing.length; i++) {
+        const team = standing[i];
+        const standingLeftTeam = standingLeft.find(
+          (sl: any) => sl.id === team.id,
+        );
+
+        if (standingLeftTeam) {
+          team.eliminated = standingLeftTeam.eliminated;
+        }
+      }
+
+      standing = standing.sort((a: any, b: any) => {
+        if (b.eliminated === a.eliminated) return 0;
+        if (b.eliminated) return -1;
+
+        return 1;
+      });
     }
 
     return standing;
@@ -528,11 +616,10 @@ class ServiceTournament {
       const match = matches.teams[i];
       const { homeTeam, awayTeam } = match;
 
-      console.log(homeTeam);
       if (homeTeam.points > awayTeam.points) {
         awayTeam.eliminated = true;
       } else if (awayTeam.points > homeTeam.points) {
-        homeTeam.eliminated = false;
+        homeTeam.eliminated = true;
       }
     }
   }
@@ -605,15 +692,19 @@ class ServiceTournament {
       round: this.getRoundName(totalRoundsTournament, 1),
     };
 
-    for (let i = 0; i < teams.length; i++) {
-      const team = teams[i];
+    const teamsToDraw = this.shuffleTeams(teams);
+
+    for (let i = 0; i < teamsToDraw.length; i++) {
+      const team = teamsToDraw[i];
       if (i % 2 === 0) {
         matchNumber++;
         homeTeam = team;
         homeTeam.points = 0;
+        homeTeam.eliminated = false;
       } else {
         awayTeam = team;
         awayTeam.points = 0;
+        awayTeam.eliminated = false;
 
         matchRound1.teams.push({ homeTeam, awayTeam, matchNumber });
 
@@ -667,65 +758,117 @@ class ServiceTournament {
   private async drawLeagueMatches(
     teams: Team[],
     participants: number,
-    group?: string,
+    group: string,
   ) {
     const matchesByTeam = await this.fixture(teams);
-    const matchesByRound: RoundTeams[] = [];
 
     for (let round = 1; round <= participants - 1; round++) {
-      const roundTeams: RoundTeams = {
-        round,
-        group,
-        teams: [],
-      };
+      let existsRoundGroups = true;
+      let existsGroupMatch = true;
+      let groupMatches = this.groupMatches.find(gm => gm.round === round);
+
+      if (!groupMatches) {
+        existsRoundGroups = false;
+        groupMatches = {
+          round,
+          groups: [],
+        };
+      }
+
+      let matches = groupMatches.groups.find(gm => gm.group === group);
+
+      if (!matches) {
+        existsGroupMatch = false;
+        matches = {
+          group,
+          teams: [],
+        };
+      }
 
       for (const team of matchesByTeam) {
         const { homeTeam, awayTeam } = this.defineHomeAwayTeam(
           team.id,
           team.matches[round - 1],
           round,
-          matchesByRound,
+          group,
+          this.groupMatches,
         );
 
         if (
-          !roundTeams.teams.find(
+          !matches.teams.find(
             t =>
               (t.homeTeam === homeTeam && t.awayTeam === awayTeam) ||
               (t.homeTeam === awayTeam && t.awayTeam === homeTeam),
           )
         ) {
-          roundTeams.teams.push({ homeTeam, awayTeam });
+          homeTeam.points = 0;
+          awayTeam.points = 0;
+          matches.teams.push({ homeTeam, awayTeam });
         }
       }
 
-      matchesByRound.push(roundTeams);
-    }
-
-    const matchesSecondTurn = [...matchesByRound];
-
-    for (let i = 0; i < matchesByRound.length; i++) {
-      const matchByRound = matchesByRound[i];
-      const round = matchByRound.round + (participants - 1);
-
-      const newMatchByRound = {
-        round,
-        group,
-        teams: [] as Teams[],
-      };
-
-      for (let t = 0; t < matchByRound.teams.length; t++) {
-        const teamsMbr = matchByRound.teams[t];
-
-        const homeTeam = teamsMbr.awayTeam;
-        const awayTeam = teamsMbr.homeTeam;
-
-        newMatchByRound.teams.push({ homeTeam, awayTeam });
+      if (!existsGroupMatch) {
+        groupMatches.groups.push(matches);
       }
 
-      matchesSecondTurn.push(newMatchByRound);
+      if (!existsRoundGroups) {
+        this.groupMatches.push(groupMatches);
+      }
     }
 
-    return matchesSecondTurn;
+    const matchesSecondTurn = [...this.groupMatches];
+
+    for (let i = 0; i < participants - 1; i++) {
+      let existsNewRoundGroups = true;
+      let existsNewGroupMatch = true;
+      const matchByRound = this.groupMatches[i];
+      const round = matchByRound.round + (participants - 1);
+
+      let newGroupMatches = this.groupMatches.find(gm => gm.round === round);
+
+      if (!newGroupMatches) {
+        existsNewRoundGroups = false;
+        newGroupMatches = {
+          round,
+          groups: [],
+        };
+      }
+
+      let newMatches = newGroupMatches.groups.find(gm => gm.group === group);
+
+      if (!newMatches) {
+        existsNewGroupMatch = false;
+        newMatches = {
+          group,
+          teams: [],
+        };
+      }
+
+      for (let g = 0; g < matchByRound.groups.length; g++) {
+        const groupMatches = matchByRound.groups[g];
+        const matchesByGroup = [];
+        for (let t = 0; t < groupMatches.teams.length; t++) {
+          const match = groupMatches.teams[t];
+
+          const homeTeam = match.awayTeam;
+          const awayTeam = match.homeTeam;
+
+          matchesByGroup.push({ homeTeam, awayTeam });
+        }
+
+        newMatches.teams = matchesByGroup;
+      }
+
+      if (!existsNewGroupMatch) {
+        newGroupMatches.groups.push(newMatches);
+      }
+
+      if (!existsNewRoundGroups) {
+        matchesSecondTurn.push(newGroupMatches);
+      }
+    }
+
+    this.groupMatches = matchesSecondTurn;
   }
 
   // Schedule matches of 'n' teams:
@@ -751,7 +894,8 @@ class ServiceTournament {
     teamA: Team,
     teamB: Team,
     round: number,
-    matchesByRound: RoundTeams[],
+    group: string,
+    matchesByRound: RoundGroupsTeams[],
   ): Teams {
     if (round === 1) {
       return { homeTeam: teamA, awayTeam: teamB };
@@ -760,11 +904,15 @@ class ServiceTournament {
     const previousRound = matchesByRound.find(mbr => mbr.round === round - 1);
     let teamAWasHome = false;
 
-    for (let i = 0; i < previousRound.teams.length; i++) {
-      const teamsInRound = previousRound.teams[i];
+    const teamsInGroup = previousRound.groups.find(g => g.group === group);
 
-      if (teamsInRound.homeTeam === teamA) {
-        teamAWasHome = true;
+    if (teamsInGroup) {
+      for (let i = 0; i < teamsInGroup.teams.length; i++) {
+        const teamsInRound = teamsInGroup.teams[i];
+
+        if (teamsInRound.homeTeam === teamA) {
+          teamAWasHome = true;
+        }
       }
     }
 
@@ -860,6 +1008,11 @@ class ServiceTournament {
       phase: tournament.currentPhase,
       round: tournament.currentRound + 1,
     };
+  }
+
+  private shuffleTeams(array: Team[]): Team[] {
+    const teams = array.sort(() => Math.random() - 0.5);
+    return teams;
   }
 
   // #endregion

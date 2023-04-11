@@ -1,6 +1,6 @@
 import { Tournament } from '@/models/Tournament';
 import mongoose from 'mongoose';
-import { v4 as uuid } from 'uuid';
+import { uuid } from 'uuidv4';
 
 const TeamSchema = new mongoose.Schema({
   name: {
@@ -103,7 +103,7 @@ const ParameterSchema = new mongoose.Schema({
   },
   correspondentRounds: {
     type: [CorrespondentRoundSchema],
-    default: 3,
+    required: false,
   },
 });
 
@@ -112,7 +112,7 @@ const TournamentSchema = new mongoose.Schema(
     id: {
       type: String,
       required: true,
-      default: uuid(),
+      default: () => uuid(),
     },
     name: {
       type: String,

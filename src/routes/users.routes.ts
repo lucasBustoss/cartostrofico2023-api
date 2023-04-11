@@ -26,4 +26,14 @@ userRouter.post('/login', async (req, res) => {
   }
 });
 
+userRouter.post('/validar', async (req, res) => {
+  try {
+    const response = await controllerUser.validate(req);
+
+    res.status(200).json(response);
+  } catch {
+    res.status(400).json(false);
+  }
+});
+
 export default userRouter;

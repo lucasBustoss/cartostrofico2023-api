@@ -21,6 +21,14 @@ class ControllerUser {
 
     return user;
   }
+
+  async validate(req: any): Promise<boolean> {
+    const { token } = req.body;
+
+    const validation = await serviceUser.validate(token);
+
+    return validation;
+  }
 }
 
 export default new ControllerUser();

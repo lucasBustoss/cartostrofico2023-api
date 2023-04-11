@@ -44,6 +44,49 @@ class CartolaApi {
     return null;
   }
 
+  async getSearchTeam(name: string): Promise<Team[] | null> {
+    const params = {
+      q: name,
+    };
+
+    const headers = {
+      'Accept-Encoding': 'application/json',
+    };
+
+    const response = await this.api.get('times', { params, headers });
+
+    if (response && response.data && response.data.length > 0) {
+      const teams = [];
+      for (let i = 0; i < response.data.length; i++) {
+        const teamCartola = response.data[i];
+
+        const {
+          nome_cartola,
+          slug,
+          url_escudo_png,
+          url_escudo_svg,
+          nome,
+          time_id,
+        } = teamCartola;
+
+        const team = {
+          name: nome,
+          slug,
+          logoPng: url_escudo_png,
+          logoSvg: url_escudo_svg,
+          coach: nome_cartola,
+          teamId: time_id,
+        };
+
+        teams.push(team);
+      }
+
+      return teams;
+    }
+
+    return null;
+  }
+
   async getStatusMarket(): Promise<StatusMarket | null> {
     const response = await this.api.get('mercado/status');
 

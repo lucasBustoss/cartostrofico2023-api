@@ -3,7 +3,7 @@ import { User, UserAuthenticated } from '@/models/User';
 import authConfig from '@/config/auth';
 
 import { hash, compare } from 'bcrypt';
-import { sign } from 'jsonwebtoken';
+import { sign, verify } from 'jsonwebtoken';
 
 class ServiceUser {
   async create(email: string, password: string): Promise<void> {
@@ -42,6 +42,17 @@ class ServiceUser {
     };
 
     return userAuthenticated;
+  }
+
+  async validate(token: string): Promise<boolean> {
+    try {
+      const { secret } = authConfig.jwt;
+      verify(token, secret);
+
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async load(email?: string): Promise<User> {

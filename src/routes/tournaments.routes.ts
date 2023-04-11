@@ -18,6 +18,17 @@ tournamentRouter.get('/', async (req, res) => {
   }
 });
 
+tournamentRouter.get('/cartola', async (req, res) => {
+  try {
+    const teams = await controllerTournament.searchCartolaTeam(req);
+
+    return res.status(200).json(teams);
+  } catch (err) {
+    console.log(err);
+    return res.status(400).json({ error: err.message });
+  }
+});
+
 tournamentRouter.post('/', async (req, res) => {
   try {
     const tournament = await controllerTournament.create(req);

@@ -22,6 +22,22 @@ export class Team {
   position?: number;
 
   points?: number;
+
+  corresponding?: number;
+}
+
+export class MatchPlayoff {
+  homeTeam: Team;
+
+  awayTeam: Team;
+
+  matchNumber: number;
+}
+
+export class MatchesPlayoffs {
+  teams: MatchPlayoff[];
+
+  round: string;
 }
 
 export class Award {
@@ -89,7 +105,7 @@ export class Tournament {
 
   matches?: any;
 
-  matchesPlayoffs?: any;
+  matchesPlayoffs?: MatchesPlayoffs[] | any;
 }
 
 export interface LoadTournamentParameters {
