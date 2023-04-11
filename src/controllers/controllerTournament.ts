@@ -127,6 +127,32 @@ class ControllerLeague {
     return 'Time adicionado com sucesso!';
   }
 
+  async deleteTeam(req: any): Promise<string> {
+    const { tournamentId, teamId } = req.body;
+
+    const tournament = await serviceTournament.loadOne({ id: tournamentId });
+
+    if (!tournament) {
+      throw new Error(`Torneio não encontrado. Verifique e tente novamente.`);
+    }
+
+    if (tournament.teams.length === 0) {
+      throw new Error(
+        `Não existe nenhum time no torneio. Verifique e tente novamente.`,
+      );
+    }
+
+    if (!tournament.teams.some(t => t.teamId === teamId)) {
+      throw new Error(
+        'Time informado não está cadastrado no torneio. Verifique e tente novamente',
+      );
+    }
+
+    await serviceTournament.deleteTeam(tournamentId, teamId);
+
+    return 'Time excluído com sucesso!';
+  }
+
   async update(req: any): Promise<string> {
     const {
       id,

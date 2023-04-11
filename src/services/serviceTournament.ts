@@ -117,6 +117,10 @@ class ServiceTournament {
     await repositoryTournament.saveTeam(cartolaTeam, tournamentId);
   }
 
+  async deleteTeam(tournamentId: string, teamId: string): Promise<void> {
+    await repositoryTournament.deleteTeam(tournamentId, teamId);
+  }
+
   async getTeamOnCartola(name: string) {
     const cartolaTeam = await apiCartola.getTeam(name);
 

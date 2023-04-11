@@ -20,6 +20,16 @@ class RepositoryTournament {
     await TournamentSchema.findOneAndUpdate({ id: tournamentId }, tournament);
   }
 
+  async deleteTeam(tournamentId: string, teamId: string): Promise<void> {
+    const tournament = await this.loadOne({ id: tournamentId });
+
+    if (tournament) {
+      tournament.teams = tournament.teams.filter(t => t.teamId !== teamId);
+    }
+
+    await TournamentSchema.findOneAndUpdate({ id: tournamentId }, tournament);
+  }
+
   async load(parameters: LoadTournamentParameters): Promise<Tournament[]> {
     const query = this.getQueryParams(parameters);
     return TournamentSchema.find(query);
