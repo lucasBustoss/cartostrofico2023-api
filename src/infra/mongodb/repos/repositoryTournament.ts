@@ -43,7 +43,11 @@ class RepositoryTournament {
   ): LoadTournamentParameters {
     const query = {} as LoadTournamentParameters;
 
-    if (parameters && parameters.ownerId) {
+    if (
+      parameters &&
+      parameters.ownerId &&
+      parameters.ownerId !== process.env.ADMIN_ID
+    ) {
       query.ownerId = parameters.ownerId;
     }
 
