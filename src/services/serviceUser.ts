@@ -37,7 +37,6 @@ class ServiceUser {
     const userAuthenticated = {
       id: user.id,
       email,
-      password,
       token,
     };
 
