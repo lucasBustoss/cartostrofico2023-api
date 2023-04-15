@@ -122,7 +122,7 @@ class ServiceTournament {
         const roundMatches = matches[i];
         const tournamentMatches = {
           round: roundMatches.round,
-          groups: [],
+          groups: [] as any,
         };
 
         for (let j = 0; j < roundMatches.groups.length; j++) {
@@ -130,7 +130,7 @@ class ServiceTournament {
 
           const groupMatchesTeam = {
             group: groupMatches.group,
-            teams: [],
+            teams: [] as any,
           };
 
           for (let k = 0; k < groupMatches.matches.length; k++) {
@@ -143,9 +143,6 @@ class ServiceTournament {
             const awayTeamFill = tournament.teams.find(
               t => t.name === awayTeam,
             );
-
-            console.log(homeTeam);
-            console.log(homeTeamFill);
 
             const matchFill = {
               homeTeam: {
@@ -180,6 +177,48 @@ class ServiceTournament {
 
         tournament.matches.push(tournamentMatches);
       }
+
+      const secondTurnMatches = [];
+
+      for (let k = 0; k < tournament.matches.length; k++) {
+        const tournamentMatch = tournament.matches[k];
+
+        const newMatch = {
+          round: tournamentMatch.round + 19,
+          groups: [] as any,
+        };
+
+        for (let l = 0; l < tournamentMatch.groups.length; l++) {
+          const group = tournamentMatch.groups[l];
+
+          const newGroup = {
+            group: group.group,
+            teams: [] as any,
+          };
+
+          for (let m = 0; m < group.teams.length; m++) {
+            const match = group.teams[m];
+            console.log(1);
+            const { homeTeam, awayTeam } = match;
+            console.log(2);
+
+            const newMatchSecondTurn = {
+              homeTeam: awayTeam,
+              awayTeam: homeTeam,
+            };
+
+            console.log(newMatchSecondTurn);
+
+            newGroup.teams.push(newMatchSecondTurn);
+          }
+
+          newMatch.groups.push(newGroup);
+        }
+
+        secondTurnMatches.push(newMatch);
+      }
+
+      tournament.matches.push(...secondTurnMatches);
 
       await repositoryTournament.update(tournament);
     }
