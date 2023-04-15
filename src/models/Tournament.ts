@@ -95,6 +95,10 @@ export class Tournament {
 
   startDate?: Date;
 
+  initialRound: number;
+
+  eliminatedsInFirstRound?: number;
+
   awards: Award[];
 
   parameters: Parameters;

@@ -51,6 +51,17 @@ tournamentRouter.post('/adicionarTime', async (req, res) => {
   }
 });
 
+tournamentRouter.post('/adicionarJogos', async (req, res) => {
+  try {
+    const response = await controllerTournament.addMatches(req);
+
+    return res.status(200).json({ message: response });
+  } catch (err) {
+    console.log(err);
+    return res.status(400).json({ error: err.message });
+  }
+});
+
 tournamentRouter.post('/excluirTime', async (req, res) => {
   try {
     const response = await controllerTournament.deleteTeam(req);

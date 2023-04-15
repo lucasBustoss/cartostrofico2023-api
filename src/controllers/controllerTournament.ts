@@ -13,7 +13,8 @@ class ControllerLeague {
   }
 
   async create(req: any): Promise<Tournament> {
-    const { name, participants, type, awards, parameters } = req.body;
+    const { name, participants, type, initialRound, awards, parameters } =
+      req.body;
     const { id } = req.user;
 
     // #region Validations
@@ -92,6 +93,7 @@ class ControllerLeague {
       name,
       participants,
       type,
+      initialRound,
       awards,
       parameters,
       id,
@@ -127,6 +129,13 @@ class ControllerLeague {
     return 'Time adicionado com sucesso!';
   }
 
+  async addMatches(req: any): Promise<string> {
+    const { id, matches } = req.body;
+    await serviceTournament.addMatches(id, matches);
+
+    return 'Jogos adicionados com sucesso!';
+  }
+
   async deleteTeam(req: any): Promise<string> {
     const { tournamentId, teamId } = req.body;
 
@@ -159,6 +168,7 @@ class ControllerLeague {
       name,
       participants,
       type,
+      initialRound,
       currentRound,
       finished,
       awards,
@@ -198,6 +208,7 @@ class ControllerLeague {
       name,
       participants,
       type,
+      initialRound,
       currentRound,
       finished,
       awards,

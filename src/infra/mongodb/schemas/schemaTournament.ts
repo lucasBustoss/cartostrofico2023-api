@@ -153,6 +153,16 @@ const TournamentSchema = new mongoose.Schema(
     drawDate: {
       type: Date,
     },
+    initialRound: {
+      type: Number,
+      required: true,
+      default: 1,
+    },
+    eliminatedsInFirstRound: {
+      type: Number,
+      required: false,
+      default: 1,
+    },
     awards: [AwardSchema],
     parameters: ParameterSchema,
     teams: {

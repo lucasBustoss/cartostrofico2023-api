@@ -13,35 +13,52 @@ class CartolaApi {
   });
 
   async getTeam(name: string): Promise<Team | null> {
-    const params = {
-      q: name,
-    };
-
-    const response = await this.api.get('times', { params });
-
-    if (response && response.data && response.data.length > 0) {
-      const {
-        nome_cartola,
-        slug,
-        url_escudo_png,
-        url_escudo_svg,
-        nome,
-        time_id,
-      } = response.data[0];
-
-      const team = {
-        name: nome,
-        slug,
-        logoPng: url_escudo_png,
-        logoSvg: url_escudo_svg,
-        coach: nome_cartola,
-        teamId: time_id,
+    try {
+      const params = {
+        q: name,
       };
 
-      return team;
-    }
+      const response = await this.api.get('times', { params });
 
-    return null;
+      if (response && response.data && response.data.length > 0) {
+        let teamCartola;
+
+        if (response.data.length > 1) {
+          teamCartola = response.data.find((d: any) => d.nome === name);
+        }
+
+        /* eslint-disable*/
+      if (!teamCartola || response.data.length === 1) {
+        teamCartola = response.data[0];
+      }
+      /* eslint-enable */
+
+        const {
+          nome_cartola,
+          slug,
+          url_escudo_png,
+          url_escudo_svg,
+          nome,
+          time_id,
+        } = teamCartola;
+
+        const team = {
+          name: nome,
+          slug,
+          logoPng: url_escudo_png,
+          logoSvg: url_escudo_svg,
+          coach: nome_cartola,
+          teamId: time_id,
+        };
+
+        return team;
+      }
+
+      return null;
+    } catch (err) {
+      console.log(err.message);
+      return null;
+    }
   }
 
   async getSearchTeam(name: string): Promise<Team[] | null> {

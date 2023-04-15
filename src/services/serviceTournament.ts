@@ -16,12 +16,6 @@ interface Teams {
   awayTeam: Team;
 }
 
-interface RoundTeams {
-  round: number;
-  group?: string;
-  teams: Teams[];
-}
-
 interface GroupMatches {
   group: string;
   teams: Teams[];
@@ -39,26 +33,26 @@ interface MatchByTeam {
 
 class ServiceTournament {
   private readonly teamNames = [
-    'Boa Timei FC',
+    '1860 munique fc',
+    'Bar Sem Lona S.A.F',
+    'Brunno Ricardo F.C',
+    'brunoipaves',
+    'Buiatchaaka',
+    'Claudioney A.A.I',
+    'Dom Carlone',
+    'Douglas DSB',
+    'EVD FC',
+    'M@nolusFC',
+    'Mahk0nga F.C',
+    'MikeLove FC',
+    'OclaromaFC',
     'Pura Várzea SC',
-    'Esportes4 FC',
-    'Refds FC',
-    'TaytSohn FC',
-    'Morschester United',
-    'Dituga FC',
-    'Lzcee FC',
-    'Lindholm FC',
-    'Codeck FC',
-    'SAF Gabaritando FC',
-    'Paçoca Rio FC',
-    'Super Júlia FC',
-    'LittleGrapes FC',
-    'TheManaósFC',
-    'Droninho FC',
-    'Brup FC',
-    'DAVIDGOOL FC ',
-    'FAVARETTO FC',
-    'King Curry FC',
+    'Sguene F.C',
+    'Shiryu EC',
+    'Só Vexame SPFC',
+    'Talascado12',
+    'Vampest F.C',
+    'Ômega PV',
   ];
 
   private groupMatches: RoundGroupsTeams[] = [];
@@ -81,6 +75,7 @@ class ServiceTournament {
     name: string,
     participants: number,
     type: string,
+    initialRound: number,
     awards: Award[],
     parameters: Parameters,
     ownerId: string,
@@ -90,6 +85,7 @@ class ServiceTournament {
       participants,
       type,
       currentRound: 0,
+      initialRound,
       currentPhase: type === 'mesclado' ? 'group' : null,
       finished: false,
       awards,
@@ -111,10 +107,82 @@ class ServiceTournament {
     const cartolaTeam = await this.getTeamOnCartola(name);
 
     if (!cartolaTeam) {
-      throw new Error('Time não existe no Cartola!');
+      throw new Error(`Time ${name} não existe no Cartola`);
     }
 
     await repositoryTournament.saveTeam(cartolaTeam, tournamentId);
+  }
+
+  async addMatches(id: string, matches: any): Promise<void> {
+    const tournament = await repositoryTournament.loadOne({ id });
+
+    if (tournament) {
+      tournament.matches = [];
+      for (let i = 0; i < matches.length; i++) {
+        const roundMatches = matches[i];
+        const tournamentMatches = {
+          round: roundMatches.round,
+          groups: [],
+        };
+
+        for (let j = 0; j < roundMatches.groups.length; j++) {
+          const groupMatches = roundMatches.groups[j];
+
+          const groupMatchesTeam = {
+            group: groupMatches.group,
+            teams: [],
+          };
+
+          for (let k = 0; k < groupMatches.matches.length; k++) {
+            const { homeTeam, awayTeam } = groupMatches.matches[k];
+
+            const homeTeamFill = tournament.teams.find(
+              t => t.name === homeTeam,
+            );
+
+            const awayTeamFill = tournament.teams.find(
+              t => t.name === awayTeam,
+            );
+
+            console.log(homeTeam);
+            console.log(homeTeamFill);
+
+            const matchFill = {
+              homeTeam: {
+                name: homeTeamFill.name,
+                slug: homeTeamFill.slug,
+                logoPng: homeTeamFill.logoPng,
+                logoSvg: homeTeamFill.logoSvg,
+                coach: homeTeamFill.coach,
+                teamId: homeTeamFill.teamId,
+                eliminated: homeTeamFill.eliminated,
+                position: homeTeamFill.position,
+                points: homeTeamFill.points,
+              },
+              awayTeam: {
+                name: awayTeamFill.name,
+                slug: awayTeamFill.slug,
+                logoPng: awayTeamFill.logoPng,
+                logoSvg: awayTeamFill.logoSvg,
+                coach: awayTeamFill.coach,
+                teamId: awayTeamFill.teamId,
+                eliminated: awayTeamFill.eliminated,
+                position: awayTeamFill.position,
+                points: awayTeamFill.points,
+              },
+            };
+
+            groupMatchesTeam.teams.push(matchFill);
+          }
+
+          tournamentMatches.groups.push(groupMatchesTeam);
+        }
+
+        tournament.matches.push(tournamentMatches);
+      }
+
+      await repositoryTournament.update(tournament);
+    }
   }
 
   async deleteTeam(tournamentId: string, teamId: string): Promise<void> {
@@ -133,6 +201,7 @@ class ServiceTournament {
     name: string,
     participants: number,
     type: string,
+    initialRound: number,
     currentRound: number,
     finished: boolean,
     awards: Award[],
@@ -146,6 +215,7 @@ class ServiceTournament {
       name,
       participants,
       type,
+      initialRound,
       currentRound,
       finished,
       awards,
@@ -242,12 +312,24 @@ class ServiceTournament {
     let actualRound =
       process.env.NODE_ENV === 'dev' ? 1 : statusMarket.actualRound;
 
+    const loopQuantity = process.env.NODE_ENV === 'dev' ? 1 : actualRound;
+
     // FOR MOCKADO PARA SIMULAR 10 RODADAS
-    for (actualRound; actualRound <= 8; actualRound++) {
+    for (actualRound; actualRound <= loopQuantity; actualRound++) {
       let round;
 
       if (tournament.finished) {
         return;
+      }
+
+      if (actualRound < tournament.initialRound) {
+        console.log('af');
+
+        if (process.env.NODE_ENV === 'dev') {
+          continue;
+        } else {
+          return;
+        }
       }
 
       if (tournament.type === 'pontos' || tournament.type === 'mesclado') {
@@ -284,12 +366,12 @@ class ServiceTournament {
 
               const { homeTeam, awayTeam } = match;
               if (process.env.NODE_ENV === 'dev') {
-                const homePoints = await apiCartola.getTeamPointsByJson(
-                  homeTeam.teamId,
+                const homePoints = Math.trunc(
+                  await apiCartola.getTeamPointsByJson(homeTeam.teamId),
                 );
 
-                const awayPoints = await apiCartola.getTeamPointsByJson(
-                  awayTeam.teamId,
+                const awayPoints = Math.trunc(
+                  await apiCartola.getTeamPointsByJson(awayTeam.teamId),
                 );
 
                 if (tournament.currentPhase !== 'group') {
@@ -324,7 +406,10 @@ class ServiceTournament {
               (tournament.type !== 'mesclado' &&
                 tournament.currentRound === actualRound)
             ) {
-              tournament.standing = await this.updateStanding(tournament);
+              tournament.standing = await this.updateStanding(
+                tournament,
+                actualRound,
+              );
             } else if (
               tournament.type === 'mesclado' &&
               tournament.currentPhase !== 'group' &&
@@ -340,7 +425,10 @@ class ServiceTournament {
             (tournament.type !== 'mesclado' &&
               tournament.currentRound !== actualRound)
           ) {
-            tournament.standing = await this.updateStanding(tournament);
+            tournament.standing = await this.updateStanding(
+              tournament,
+              actualRound,
+            );
           }
         }
 
@@ -463,14 +551,20 @@ class ServiceTournament {
       }
 
       if (tournament.type === 'resta') {
-        tournament.standing = await this.updateStanding(tournament);
+        tournament.standing = await this.updateStanding(
+          tournament,
+          actualRound,
+        );
       }
 
       await repositoryTournament.update(tournament);
     }
   }
 
-  async updateStanding(tournament: Tournament): Promise<void> {
+  async updateStanding(
+    tournament: Tournament,
+    actualRound: number,
+  ): Promise<void> {
     let { standing } = tournament;
     let matchesRound;
 
@@ -557,7 +651,11 @@ class ServiceTournament {
               Number((earnedPointAway / totalPointsAway).toFixed(2)) * 100;
 
             groupStanding = groupStanding.sort((a: any, b: any) => {
-              return b.points - a.points || b.pointsFavor - a.pointsFavor;
+              return (
+                b.points - a.points ||
+                b.wins - a.wins ||
+                b.pointsFavor - a.pointsFavor
+              );
             });
 
             for (let j = 1; j <= groupStanding.length; j++) {
@@ -587,7 +685,20 @@ class ServiceTournament {
         return b.points - a.points;
       });
 
-      standingLeft[standingLeft.length - 1].eliminated = true;
+      if (tournament.initialRound === actualRound) {
+        const eliminatedQuantity = tournament.eliminatedsInFirstRound * -1;
+        const eliminatedTeams = standingLeft.slice(eliminatedQuantity);
+
+        for (let i = 0; i < standingLeft.length; i++) {
+          const teamLeft = standingLeft[i];
+
+          if (eliminatedTeams.includes(teamLeft)) {
+            teamLeft.eliminated = true;
+          }
+        }
+      } else {
+        standingLeft[standingLeft.length - 1].eliminated = true;
+      }
 
       for (let i = 0; i < standing.length; i++) {
         const team = standing[i];
@@ -937,7 +1048,11 @@ class ServiceTournament {
     const teamsStanding = standing
       .filter((s: any) => s.group === group)
       .sort((a: any, b: any) => {
-        return b.points - a.points || b.pointsFavor - a.pointsFavor;
+        return (
+          b.points - a.points ||
+          b.wins - a.wins ||
+          b.pointsFavor - a.pointsFavor
+        );
       })
       .slice(0, numberOfTeams);
 
