@@ -120,10 +120,14 @@ class CartolaApi {
   }
 
   async getTeamPoints(id: number): Promise<number> {
-    const response = await this.api.get(`time/id/${id}`);
+    const headers = {
+      'Accept-Encoding': 'application/json',
+    };
+
+    const response = await this.api.get(`time/id/${id}`, { headers });
 
     if (response && response.data) {
-      const points = response.data.pontos || 0;
+      const points = Number(response.data.pontos.toFixed(2)) || 0;
 
       return points;
     }

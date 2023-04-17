@@ -198,16 +198,12 @@ class ServiceTournament {
 
           for (let m = 0; m < group.teams.length; m++) {
             const match = group.teams[m];
-            console.log(1);
             const { homeTeam, awayTeam } = match;
-            console.log(2);
 
             const newMatchSecondTurn = {
               homeTeam: awayTeam,
               awayTeam: homeTeam,
             };
-
-            console.log(newMatchSecondTurn);
 
             newGroup.teams.push(newMatchSecondTurn);
           }
@@ -362,8 +358,6 @@ class ServiceTournament {
       }
 
       if (actualRound < tournament.initialRound) {
-        console.log('af');
-
         if (process.env.NODE_ENV === 'dev') {
           continue;
         } else {
@@ -383,17 +377,16 @@ class ServiceTournament {
             round = tournament.matches.find(
               (m: any) => m.round === correspondent.round,
             );
-            tournament.currentRound = correspondent.round;
           } else {
             round = tournament.matchesPlayoffs.find(
               (m: any) =>
                 m.round === correspondent.phase && !correspondent.played,
             );
-            tournament.currentRound = correspondent.round;
           }
         } else {
-          round = tournament.matches.find((m: any) => m.round === actualRound);
-          tournament.currentRound = actualRound;
+          round = tournament.matches.find(
+            (m: any) => m.round === actualRound - 1,
+          );
         }
 
         if (round) {
@@ -404,34 +397,36 @@ class ServiceTournament {
               const match = group.teams[i];
 
               const { homeTeam, awayTeam } = match;
+              let homePoints;
+              let awayPoints;
               if (process.env.NODE_ENV === 'dev') {
-                const homePoints = Math.trunc(
+                homePoints = Math.trunc(
                   await apiCartola.getTeamPointsByJson(homeTeam.teamId),
                 );
 
-                const awayPoints = Math.trunc(
+                awayPoints = Math.trunc(
                   await apiCartola.getTeamPointsByJson(awayTeam.teamId),
                 );
-
-                if (tournament.currentPhase !== 'group') {
-                  if (tournament.currentRound === 1) {
-                    homeTeam.points = 0;
-                    awayTeam.points = 0;
-                  }
-
-                  homeTeam.points += homePoints;
-                  awayTeam.points += awayPoints;
-                } else {
-                  homeTeam.points = homePoints;
-                  awayTeam.points = awayPoints;
-                }
               } else {
-                homeTeam.points = await apiCartola.getTeamPoints(
-                  homeTeam.teamId,
+                homePoints = Math.trunc(
+                  await apiCartola.getTeamPoints(homeTeam.teamId),
                 );
-                awayTeam.points = await apiCartola.getTeamPoints(
-                  awayTeam.teamId,
+                awayPoints = Math.trunc(
+                  await apiCartola.getTeamPoints(awayTeam.teamId),
                 );
+              }
+
+              if (tournament.currentPhase !== 'group') {
+                if (tournament.currentRound === 1) {
+                  homeTeam.points = 0;
+                  awayTeam.points = 0;
+                }
+
+                homeTeam.points += homePoints;
+                awayTeam.points += awayPoints;
+              } else {
+                homeTeam.points = homePoints;
+                awayTeam.points = awayPoints;
               }
             }
           }
@@ -473,6 +468,9 @@ class ServiceTournament {
 
         if (correspondent) {
           correspondent.played = true;
+          tournament.currentRound = correspondent.round;
+        } else {
+          tournament.currentRound = actualRound;
         }
       }
 
